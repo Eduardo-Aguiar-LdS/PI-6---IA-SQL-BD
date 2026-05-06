@@ -15,7 +15,7 @@ llm_sql = OllamaLLM(model="llama3.2")
 llm_texto = OllamaLLM(model="llama3.2") # Explica o SQL em português
 llm_resultado = OllamaLLM(model="llama3.2") # Explica o resultado
 
-pergunta = "quais é o livro mais com mais emprestimos e quais as informações completas deste livro?"
+pergunta = "Qual o escritor com mais livros na bilbioteca?"
 
 # 1. GERA O SQL (com o Prem)
 prompt_sql = f"""Given the following SQLite database schema:
