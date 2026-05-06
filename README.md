@@ -4,8 +4,10 @@ Projeto de desenvolvimento de uma inteligência artificial capaz de se integrar 
 
 ## 1º Passo
 Instalar o [Ollama](https://ollama.com/download/windows).  
+Baixar e instlar o [Python](https://www.python.org/downloads/). PY antigo
 Executar ```ollama run prem-research/prem-1b-sql-fp16``` no CMD.  
-Baixar e instlar o [Python](https://www.python.org/downloads/). 
+executar ```python -m venv .venv``` 
+
 
 
 

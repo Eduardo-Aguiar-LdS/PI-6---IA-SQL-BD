@@ -1,32 +1,71 @@
-from premsql.agents import BaseLineAgent
-from premsql.generators import Text2SQLGeneratorOllama
-from premsql.agents.tools import SimpleMatplotlibTool
-from premsql.executors import SQLiteExecutor
+from langchain_ollama import OllamaLLM
+import sqlite3
 
-text2_sqlmodel = Text2SQLGeneratorHF(
-    model_or_name_or_path="prem-research/prem-1B-SQL",
-    experiment_name="test_generators",
-    device="cuda:0",
-    type="test"
-)
+# Conecta ao banco
+conn = sqlite3.connect("./db/biblioteca.sqlite")
+cursor = conn.cursor()
 
-analyser_and_plotter = Text2SQLGeneratorHF(
-    model_or_name_or_path="meta-llama/Llama-3.2-1B-Instruct",
-    experiment_name="test_generators",
-    device="cuda:0",
-    type="test"
-)
+# Pega o schema
+cursor.execute("SELECT sql FROM sqlite_master WHERE type='table';")
+schema = "\n".join([row[0] for row in cursor.fetchall() if row[0]])
 
-agent = BaseLineAgent(
-    session_name="testing_hf",
-    db_connection_uri="sqlite:////db/biblioteca.sqlite",
-    specialized_model1=model,
-    specialized_model2=model,
-    plot_tool=SimpleMatplotlibTool(),
-    executor=SQLiteExecutor()
-)
+# Inicializa os dois modelos
+# llm_sql = OllamaLLM(model="prem-research/prem-1b-sql-fp16:latest") # Faz o SQL
+llm_sql = OllamaLLM(model="llama3.2")
+llm_texto = OllamaLLM(model="llama3.2") # Explica o SQL em português
+llm_resultado = OllamaLLM(model="llama3.2") # Explica o resultado
 
-response = agent(
-    "/query what all tables are present inside the database"
-)
-response.show_dataframe()
+pergunta = "quais é o livro mais com mais emprestimos e quais as informações completas deste livro?"
+
+# 1. GERA O SQL (com o Prem)
+prompt_sql = f"""Given the following SQLite database schema:
+{schema}
+
+Generate only the SQL query to answer this question (no explanation) do not limit the result:
+{pergunta}"""
+
+sql = llm_sql.invoke(prompt_sql).strip()
+
+# 2. EXECUTA NO BANCO
+try:
+    cursor.execute(sql)
+    resultado = cursor.fetchall()
+except Exception as e:
+    resultado = f"Erro: {e}"
+
+# 3. EXPLICA O SQL GERADO (com o Llama 3.2)
+prompt_explicacao = f"""Você é um analista de banco de dados.
+Explique de forma curta e simples, em português, o que o comando SQL abaixo faz.
+
+Comando SQL:
+{sql}
+
+Responda apenas com a explicação, sem enrolação."""
+
+explicacao = llm_texto.invoke(prompt_explicacao).strip()
+
+# 4. Explica o resultado da query
+prompt_resultado = f"""
+    Explique de forma objetiva, clara e simples, em português a resposta gerada pela execução, bom base no schema do banco: {schema}
+
+    resposta: {resultado}
+"""
+
+resultado_explicado = llm_texto.invoke(prompt_resultado).strip()
+
+# 4. MOSTRA TUDO
+print("=" * 50)
+print("SQL GERADO:")
+print(sql)
+print("-" * 50)
+print("RESULTADO DO BANCO:")
+print(resultado)
+print("-" * 50)
+print("O QUE ESTA QUERY FAZ:")
+print(explicacao)
+print("=" * 50)
+print("EXPLICAÇÃO DO RESULTADO:")
+print(resultado_explicado)
+print("=" * 50)
+
+conn.close()
