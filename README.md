@@ -47,5 +47,3 @@ Com o ambiente virtual ativado, execute:
 ```bash
 python IA.py
 ```
-
-## 📁 Estrutura do projeto
