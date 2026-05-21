@@ -41,6 +41,11 @@ pip install -r requirements.txt
 ```
 
 ## ▶️ Como usar
+Ative/Entre no ambiente virtual rodando
+```
+.\.venv\Scripts\activate
+```
+
 
 Com o ambiente virtual ativado, execute:
 
