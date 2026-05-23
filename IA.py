@@ -1,12 +1,13 @@
 from langchain_ollama import OllamaLLM
 import sqlite3
 import re
-
+from pathlib import Path
 
 VERSION = "0.2.1"
 DB_PATH = "./db/biblioteca.sqlite"
 MODEL_SQL = "prem-research/prem-1b-sql-fp16:latest"
-MODEL_TEXT = "llama3.2"
+EXEMPLOS_GERAIS_PATH = "./exemplos.txt"
+# exemplos_bd_path ela é pega ao lado do DB_path e tem que ter o mesmo nome do BD
 
 COMANDOS_BLOQUEADOS = {
     "insert", "update", "delete", "drop", "alter", "truncate",
@@ -50,29 +51,60 @@ def obter_schema(cursor) -> str:
     cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL;")
     return "\n".join(row[0] for row in cursor.fetchall())
 
+def carregar_arquivo_texto(caminho: str) -> str:
+    try:
+        with open(caminho, "r", encoding="utf-8") as arquivo:
+            return arquivo.read().strip()
+    except FileNotFoundError:
+        return ""
 
-def gerar_sql(llm_sql, schema: str, pergunta: str) -> str:
+def obter_exemplos_bd_path(db_path: str) -> str:
+    return str(Path(db_path).with_suffix(".txt"))
+
+def montar_exemplos_prompt(exemplos_bd: str, exemplos_gerais: str) -> str:
+    partes = []
+
+    if exemplos_bd:
+        partes.append("Examples specific to this database:\n" + exemplos_bd)
+
+    if exemplos_gerais:
+        partes.append("General examples:\n" + exemplos_gerais)
+
+    return "\n\n".join(partes)
+
+
+def gerar_sql(llm_sql, schema: str, pergunta: str, exemplos: str = "") -> str:
     prompt = f"""
-You are a SQLite SQL generator.
-Return exactly one valid SQLite query.
+You are an expert SQLite query generator.
+
+Your task is to convert a natural language question into exactly one valid SQLite read-only query.
 
 Rules:
 - Output only SQL.
 - Do not explain anything.
 - Do not use markdown.
 - Start directly with SELECT or WITH.
+- Generate exactly one query.
 - Never write INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, PRAGMA or any write command.
 - Use only tables and columns that exist in the schema.
-- Return a read-only query.
-- When the question asks for most, least, highest, lowest, greater, smaller, average, total or quantity, include explicit aggregate columns like COUNT(*) AS quantidade when helpful.
-- Prefer SQL that returns data easy to explain.
-- If the question asks for the least or most frequent item, prefer returning both the item and COUNT(*) AS quantidade.
+- Never invent table names or column names.
+- Prefer the simplest correct query.
+- Return only the columns necessary to answer the question.
+- If the question asks for count, quantity, total, average, minimum, maximum, least, most, highest or lowest, use explicit aggregates when appropriate.
+- If the question asks for the most or least frequent item, prefer returning both the item and COUNT(*) AS quantidade.
+- If a JOIN is necessary, use it only when the schema supports it clearly.
+- If the question is ambiguous, choose the safest interpretation based only on the schema.
+
+Examples:
+{exemplos}
 
 Schema:
 {schema}
 
 Question:
 {pergunta}
+
+SQL:
 """
     return llm_sql.invoke(prompt).strip()
 
@@ -90,10 +122,10 @@ def montar_resposta_direta(colunas, linhas):
         return "Nenhum resultado encontrado."
 
     if len(linhas) == 1 and len(colunas) == 1:
-        return f"Resposta: {linhas}"
+        return f"Resposta: {linhas[0][0]}"
 
     if len(linhas) == 1:
-        pares = [f"{col}: {valor}" for col, valor in zip(colunas, linhas)]
+        pares = [f"{col}: {valor}" for col, valor in zip(colunas, linhas[0])]
         return "Resposta: " + ", ".join(pares)
 
     if len(linhas) <= 5:
@@ -110,8 +142,11 @@ def loop_perguntas():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     schema = obter_schema(cursor)
+    exemplos_bd_path = obter_exemplos_bd_path(DB_PATH)
+    exemplos_bd = carregar_arquivo_texto(exemplos_bd_path)
+    exemplos_gerais = carregar_arquivo_texto(EXEMPLOS_GERAIS_PATH)
+    exemplos = montar_exemplos_prompt(exemplos_bd, exemplos_gerais)
     llm_sql = OllamaLLM(model=MODEL_SQL)
-    llm_texto = OllamaLLM(model=MODEL_TEXT)
 
     print("=" * 70)
     print(f"IA SQL v{VERSION} pronta. Faça perguntas sobre o banco em linguagem natural.")
@@ -131,7 +166,7 @@ def loop_perguntas():
                 break
 
             try:
-                sql_bruto = gerar_sql(llm_sql, schema, pergunta)
+                sql_bruto = gerar_sql(llm_sql, schema, pergunta, exemplos)
                 sql = limpar_sql(sql_bruto)
                 valido, motivo = sql_valido(sql)
 
