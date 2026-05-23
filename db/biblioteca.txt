@@ -1,0 +1,23 @@
+Q: Quais livros ainda não foram devolvidos?
+Q: Which books have not been returned yet?
+A: SELECT l.titulo FROM livros l
+   JOIN emprestimos e ON e.id_livro = l.id_livro
+   WHERE e.data_devolucao IS NULL;
+
+Q: Quais usuários ainda não devolveram os livros que pegaram emprestados?
+Q: Which users haven't returned the books they borrowed?
+A: SELECT DISTINCT u.nome FROM usuarios u
+   JOIN emprestimos e ON e.id_usuario = u.id_usuario
+   WHERE e.data_devolucao IS NULL;
+
+Q: Quais usuários ainda não devolveram os livros?
+Q: Which users have not returned the books yet?
+A: SELECT DISTINCT u.nome FROM usuarios u
+   JOIN emprestimos e ON e.id_usuario = u.id_usuario
+   WHERE e.data_devolucao IS NULL;
+
+Q: Quais usuários não devolveram os livros que pegaram emprestado?
+Q: Which users did not return the books they borrowed?
+A: SELECT DISTINCT u.nome FROM usuarios u
+   JOIN emprestimos e ON e.id_usuario = u.id_usuario
+   WHERE e.data_devolucao IS NULL;
