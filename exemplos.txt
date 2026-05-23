@@ -1,0 +1,117 @@
+Q: Quais usuários ainda não devolveram os livros que pegaram emprestados?
+Q: Which users haven't returned the books they borrowed?
+A: SELECT usuarios.nome FROM usuarios
+   JOIN emprestimos ON emprestimos.usuario_id = usuarios.id
+   WHERE emprestimos.data_devolucao IS NULL;
+
+Q: Quais usuários ainda não devolveram os itens emprestados?
+Q: Which users haven't returned their borrowed items?
+A: SELECT u.nome FROM usuarios u
+   JOIN emprestimos e ON e.usuario_id = u.id
+   WHERE e.data_devolucao IS NULL;
+
+Q: Qual a categoria mais frequente?
+Q: What is the most frequent category?
+A: SELECT categoria, COUNT(*) AS total FROM itens
+   GROUP BY categoria ORDER BY total DESC LIMIT 1;
+
+Q: Qual a categoria menos frequente?
+Q: What is the least frequent category?
+A: SELECT categoria, COUNT(*) AS total FROM itens
+   GROUP BY categoria ORDER BY total ASC LIMIT 1;
+
+Q: Qual o item mais emprestado?
+Q: What is the most borrowed item?
+A: SELECT i.nome, COUNT(*) AS total FROM itens i
+   JOIN emprestimos e ON e.item_id = i.id
+   GROUP BY i.nome ORDER BY total DESC LIMIT 1;
+
+Q: Quais itens nunca foram emprestados?
+Q: List all items that have never been borrowed?
+A: SELECT i.nome FROM itens i
+   LEFT JOIN emprestimos e ON e.item_id = i.id
+   WHERE e.id IS NULL;
+
+Q: Quais usuários nunca fizeram nenhum registro?
+Q: List all users that have never made any record?
+A: SELECT u.nome FROM usuarios u
+   LEFT JOIN emprestimos e ON e.usuario_id = u.id
+   WHERE e.id IS NULL;
+
+Q: Quantos registros existem na tabela?
+Q: How many records exist in the table?
+A: SELECT COUNT(*) AS total FROM tabela;
+
+Q: Qual a média de uma coluna numérica?
+Q: What is the average value of a numeric column?
+A: SELECT AVG(coluna) AS total FROM tabela;
+
+Q: Qual o total somado de uma coluna numérica?
+Q: What is the total sum of a numeric column?
+A: SELECT SUM(coluna) AS total FROM tabela;
+
+Q: Liste todos os registros em ordem alfabética?
+Q: List all records ordered alphabetically?
+A: SELECT nome FROM tabela ORDER BY nome ASC;
+
+Q: Liste todos os registros do mais recente para o mais antigo?
+Q: List all records ordered by date descending?
+A: SELECT * FROM tabela ORDER BY data DESC;
+
+Q: Busque um registro pelo nome?
+Q: Find a record by name?
+A: SELECT * FROM tabela WHERE nome LIKE '%valor%';
+
+Q: Quantos itens existem em cada grupo?
+Q: How many items does each group have?
+A: SELECT grupo, COUNT(*) AS total FROM tabela
+   GROUP BY grupo ORDER BY total DESC;
+
+Q: Qual o registro mais recente?
+Q: What is the most recent record?
+A: SELECT * FROM tabela ORDER BY data DESC LIMIT 1;
+
+Q: Qual o registro mais antigo?
+Q: What is the oldest record?
+A: SELECT * FROM tabela ORDER BY data ASC LIMIT 1;
+
+Q: Liste itens com valor acima da média?
+Q: List items with a value above average?
+A: SELECT nome, valor FROM tabela
+   WHERE valor > (SELECT AVG(valor) FROM tabela);
+
+Q: Liste registros onde uma coluna está vazia ou nula?
+Q: List records where a column is null?
+A: SELECT * FROM tabela WHERE coluna IS NULL;
+
+Q: Liste registros onde uma coluna está preenchida?
+Q: List records where a column is not null?
+A: SELECT * FROM tabela WHERE coluna IS NOT NULL;
+
+Q: Quantos valores distintos existem em uma coluna?
+Q: How many distinct values exist in a column?
+A: SELECT COUNT(DISTINCT coluna) AS total FROM tabela;
+
+Q: Liste todos os valores distintos de uma coluna?
+Q: List all distinct values in a column?
+A: SELECT DISTINCT coluna FROM tabela ORDER BY coluna ASC;
+
+Q: Qual o nome e a contagem agrupados por relacionamento?
+Q: Get the name and count grouped by a foreign key relation?
+A: SELECT b.nome, COUNT(*) AS total FROM tabela_a a
+   JOIN tabela_b b ON b.id = a.b_id
+   GROUP BY b.nome ORDER BY total DESC;
+
+Q: Quais registros têm data entre dois valores?
+Q: Which records have a date between two values?
+A: SELECT * FROM tabela
+   WHERE data BETWEEN '2024-01-01' AND '2024-12-31';
+
+Q: Liste os 5 primeiros resultados?
+Q: List the top 5 results?
+A: SELECT * FROM tabela LIMIT 5;
+
+Q: Quais registros pertencem a mais de um grupo?
+Q: Which items appear more than once?
+A: SELECT coluna, COUNT(*) AS total FROM tabela
+   GROUP BY coluna HAVING COUNT(*) > 1;

@@ -27,7 +27,7 @@ def limpar_sql(texto: str) -> str:
     if match:
         texto = match.group(0).strip()
     if ";" in texto:
-        texto = texto.split(";").strip() + ";"
+        texto = texto.split(";")[0].strip() + ";"
     else:
         texto = texto.rstrip() + ";"
     return texto
@@ -80,27 +80,9 @@ Question:
 def executar_sql_readonly(cursor, sql: str):
     cursor.execute("PRAGMA query_only = ON;")
     cursor.execute(sql)
-    colunas = [desc for desc in cursor.description] if cursor.description else []
+    colunas = [desc[0] for desc in cursor.description] if cursor.description else []
     linhas = cursor.fetchall()
     return colunas, linhas
-
-
-# Deixado comentado para usar depois (explicação via IA).
-# def explicar_sql_curto(sql: str) -> str:
-#     sql_lower = sql.lower()
-#     if "count(" in sql_lower and "group by" in sql_lower and "order by" in sql_lower and "asc" in sql_lower:
-#         return "Essa consulta agrupa os registros, conta quantos existem em cada grupo e retorna o grupo com a menor quantidade."
-#     if "count(" in sql_lower and "group by" in sql_lower and "order by" in sql_lower and "desc" in sql_lower:
-#         return "Essa consulta agrupa os registros, conta quantos existem em cada grupo e retorna o grupo com a maior quantidade."
-#     if "count(" in sql_lower and "group by" in sql_lower:
-#         return "Essa consulta agrupa os registros e conta quantos existem em cada grupo."
-#     if "avg(" in sql_lower:
-#         return "Essa consulta calcula uma média com base nos dados do banco."
-#     if "sum(" in sql_lower:
-#         return "Essa consulta soma valores do banco e retorna o total calculado."
-#     if sql_lower.startswith("select"):
-#         return "Essa consulta lê dados do banco e retorna o resultado que melhor responde à pergunta feita."
-#     return "Consulta SQL de leitura executada no banco."
 
 
 def montar_resposta_direta(colunas, linhas):
@@ -119,31 +101,9 @@ def montar_resposta_direta(colunas, linhas):
         for i, linha in enumerate(linhas, start=1):
             pares = [f"{col}: {valor}" for col, valor in zip(colunas, linha)]
             resultados.append(f"{i}) " + ", ".join(pares))
-        return "Resultados encontrados:\n" + "\n".join(resultados)
+        
 
-    return None
-
-
-def explicar_resultado_llm(llm_texto, pergunta: str, colunas, linhas) -> str:
-    prompt = f"""
-Responda em português, de forma objetiva e fiel, com base apenas no resultado abaixo.
-Não invente informação.
-Não contradiga o resultado.
-Se houver informação suficiente, responda diretamente.
-Se não houver, diga claramente que não há informação suficiente.
-
-Pergunta:
-{pergunta}
-
-Colunas:
-{colunas}
-
-Linhas:
-{linhas}
-
-Responda em no máximo 3 linhas.
-"""
-    return llm_texto.invoke(prompt).strip()
+    return "Resultados encontrados:\n" + "\n".join(resultados)
 
 
 def loop_perguntas():
@@ -184,29 +144,15 @@ def loop_perguntas():
                     continue
 
                 colunas, linhas = executar_sql_readonly(cursor, sql)
-
-                # Deixado comentado para uso futuro.
-                # explicacao = explicar_sql_curto(sql)
-
-                resposta_final = montar_resposta_direta(colunas, linhas)
-                if resposta_final is None:
-                    resposta_final = explicar_resultado_llm(llm_texto, pergunta, colunas, linhas)
+                resposta = montar_resposta_direta(colunas, linhas)
 
                 print("\n" + "-" * 70)
                 print("SQL EXECUTADO:")
                 print(sql)
                 print("-" * 70)
-                print("RESULTADO:")
-                print(linhas)
+                print("RESPOSTA:")
+                print(resposta)
                 print("-" * 70)
-                print("RESPOSTA FINAL:")
-                print(resposta_final)
-                print("-" * 70)
-
-                # Deixado comentado para uso futuro.
-                # print("O QUE ESTA QUERY FAZ:")
-                # print(explicacao)
-                # print("-" * 70)
 
             except Exception as e:
                 print("\nErro ao processar a pergunta:")
