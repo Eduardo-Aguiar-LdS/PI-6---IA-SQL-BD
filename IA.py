@@ -2,10 +2,12 @@ from langchain_ollama import OllamaLLM
 import sqlite3
 import re
 
+
 VERSION = "0.2.1"
 DB_PATH = "./db/biblioteca.sqlite"
 MODEL_SQL = "prem-research/prem-1b-sql-fp16:latest"
 MODEL_TEXT = "llama3.2"
+
 COMANDOS_BLOQUEADOS = {
     "insert", "update", "delete", "drop", "alter", "truncate",
     "create", "replace", "attach", "detach", "pragma", "reindex",
@@ -25,7 +27,7 @@ def limpar_sql(texto: str) -> str:
     if match:
         texto = match.group(0).strip()
     if ";" in texto:
-        texto = texto.split(";")[0].strip() + ";"
+        texto = texto.split(";").strip() + ";"
     else:
         texto = texto.rstrip() + ";"
     return texto
@@ -59,10 +61,12 @@ Rules:
 - Do not explain anything.
 - Do not use markdown.
 - Start directly with SELECT or WITH.
-- Never write INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, PRAGMA or any write command. 
+- Never write INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, PRAGMA or any write command.
 - Use only tables and columns that exist in the schema.
 - Return a read-only query.
-- When aggregating, alias the column as 'total' (e.g. COUNT(*) AS total, AVG(...) AS total).
+- When the question asks for most, least, highest, lowest, greater, smaller, average, total or quantity, include explicit aggregate columns like COUNT(*) AS quantidade when helpful.
+- Prefer SQL that returns data easy to explain.
+- If the question asks for the least or most frequent item, prefer returning both the item and COUNT(*) AS quantidade.
 
 Schema:
 {schema}
@@ -76,44 +80,47 @@ Question:
 def executar_sql_readonly(cursor, sql: str):
     cursor.execute("PRAGMA query_only = ON;")
     cursor.execute(sql)
-    colunas = [desc[0] for desc in cursor.description] if cursor.description else []
+    colunas = [desc for desc in cursor.description] if cursor.description else []
     linhas = cursor.fetchall()
     return colunas, linhas
 
 
-def explicar_sql_curto(sql: str) -> str:
-    sql_lower = sql.lower()
-    if "count(" in sql_lower and "group by" in sql_lower and "order by" in sql_lower and "asc" in sql_lower:
-        return "Essa consulta agrupa os registros, conta quantos existem em cada grupo e retorna o grupo com a menor quantidade."
-    if "count(" in sql_lower and "group by" in sql_lower and "order by" in sql_lower and "desc" in sql_lower:
-        return "Essa consulta agrupa os registros, conta quantos existem em cada grupo e retorna o grupo com a maior quantidade."
-    if "count(" in sql_lower and "group by" in sql_lower:
-        return "Essa consulta agrupa os registros e conta quantos existem em cada grupo."
-    if "avg(" in sql_lower:
-        return "Essa consulta calcula uma média com base nos dados do banco."
-    if "sum(" in sql_lower:
-        return "Essa consulta soma valores do banco e retorna o total calculado."
-    if sql_lower.startswith("select"):
-        return "Essa consulta lê dados do banco e retorna o resultado que melhor responde à pergunta feita."
-    return "Consulta SQL de leitura executada no banco."
+# Deixado comentado para usar depois (explicação via IA).
+# def explicar_sql_curto(sql: str) -> str:
+#     sql_lower = sql.lower()
+#     if "count(" in sql_lower and "group by" in sql_lower and "order by" in sql_lower and "asc" in sql_lower:
+#         return "Essa consulta agrupa os registros, conta quantos existem em cada grupo e retorna o grupo com a menor quantidade."
+#     if "count(" in sql_lower and "group by" in sql_lower and "order by" in sql_lower and "desc" in sql_lower:
+#         return "Essa consulta agrupa os registros, conta quantos existem em cada grupo e retorna o grupo com a maior quantidade."
+#     if "count(" in sql_lower and "group by" in sql_lower:
+#         return "Essa consulta agrupa os registros e conta quantos existem em cada grupo."
+#     if "avg(" in sql_lower:
+#         return "Essa consulta calcula uma média com base nos dados do banco."
+#     if "sum(" in sql_lower:
+#         return "Essa consulta soma valores do banco e retorna o total calculado."
+#     if sql_lower.startswith("select"):
+#         return "Essa consulta lê dados do banco e retorna o resultado que melhor responde à pergunta feita."
+#     return "Consulta SQL de leitura executada no banco."
 
 
-def montar_resposta_direta(pergunta: str, colunas, linhas):
+def montar_resposta_direta(colunas, linhas):
     if not linhas:
         return "Nenhum resultado encontrado."
 
-    # 1 linha, 1 coluna → valor único direto
-    if len(linhas) == 1 and len(linhas[0]) == 1:
-        valor = linhas[0][0]
-        return f"Resultado: {valor}"
+    if len(linhas) == 1 and len(colunas) == 1:
+        return f"Resposta: {linhas}"
 
-    # 1 linha, 2 colunas → item + quantidade (padrão de COUNT/GROUP BY)
-    if len(linhas) == 1 and len(linhas[0]) == 2:
-        valor, quantidade = linhas[0]
-        col_nome = colunas[1].lower() if len(colunas) >= 2 else "quantidade"
-        return f"Resultado principal: **{valor}** — {col_nome}: {quantidade}"
+    if len(linhas) == 1:
+        pares = [f"{col}: {valor}" for col, valor in zip(colunas, linhas)]
+        return "Resposta: " + ", ".join(pares)
 
-    # Poucas linhas → deixa pro LLM explicar melhor
+    if len(linhas) <= 5:
+        resultados = []
+        for i, linha in enumerate(linhas, start=1):
+            pares = [f"{col}: {valor}" for col, valor in zip(colunas, linha)]
+            resultados.append(f"{i}) " + ", ".join(pares))
+        return "Resultados encontrados:\n" + "\n".join(resultados)
+
     return None
 
 
@@ -139,16 +146,6 @@ Responda em no máximo 3 linhas.
     return llm_texto.invoke(prompt).strip()
 
 
-def perguntar_novamente() -> bool:
-    while True:
-        resposta = input("Deseja tentar gerar o SQL novamente? (s/n): ").strip().lower()
-        if resposta in {"s", "sim"}:
-            return True
-        if resposta in {"n", "nao", "não"}:
-            return False
-        print("Resposta inválida. Digite 's' para sim ou 'n' para não.")
-
-
 def loop_perguntas():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -164,64 +161,57 @@ def loop_perguntas():
     try:
         while True:
             pergunta = input("\nPergunta: ").strip()
+
             if not pergunta:
                 print("Digite uma pergunta válida.")
                 continue
+
             if pergunta.lower() in {"sair", "exit", "quit"}:
                 print("Encerrando.")
                 break
 
-            while True:
-                try:
-                    sql_bruto = gerar_sql(llm_sql, schema, pergunta)
-                    sql = limpar_sql(sql_bruto)
-                    valido, motivo = sql_valido(sql)
+            try:
+                sql_bruto = gerar_sql(llm_sql, schema, pergunta)
+                sql = limpar_sql(sql_bruto)
+                valido, motivo = sql_valido(sql)
 
-                    if not valido:
-                        print("\n" + "-" * 70)
-                        print("SQL BLOQUEADO:")
-                        print(sql)
-                        print(f"Motivo: {motivo}")
-                        print("-" * 70)
-                        if perguntar_novamente():
-                            continue
-                        break
-
-                    colunas, linhas = executar_sql_readonly(cursor, sql)
-                    explicacao = explicar_sql_curto(sql)
-                    resposta_final = montar_resposta_direta(pergunta, colunas, linhas)
-                    if resposta_final is None:
-                        resposta_final = explicar_resultado_llm(llm_texto, pergunta, colunas, linhas)
-
+                if not valido:
                     print("\n" + "-" * 70)
-                    print("SQL EXECUTADO:")
+                    print("SQL BLOQUEADO:")
                     print(sql)
+                    print(f"Motivo: {motivo}")
+                    print("-" * 70)
+                    continue
 
-                    # Para voltar a mostrar o SQL bruto do modelo, descomente as 3 linhas abaixo:
-                    # print("-" * 70)
-                    # print("SQL BRUTO DO MODELO:")
-                    # print(sql_bruto)
+                colunas, linhas = executar_sql_readonly(cursor, sql)
 
-                    print("-" * 70)
-                    print("COLUNAS:")
-                    print(colunas)
-                    print("-" * 70)
-                    print("RESULTADO:")
-                    print(linhas)
-                    print("-" * 70)
-                    print("O QUE ESTA QUERY FAZ:")
-                    print(explicacao)
-                    print("-" * 70)
-                    print("RESPOSTA FINAL:")
-                    print(resposta_final)
-                    print("-" * 70)
-                    break
-                except Exception as e:
-                    print("Erro ao processar a pergunta:")
-                    print(str(e))
-                    if perguntar_novamente():
-                        continue
-                    break
+                # Deixado comentado para uso futuro.
+                # explicacao = explicar_sql_curto(sql)
+
+                resposta_final = montar_resposta_direta(colunas, linhas)
+                if resposta_final is None:
+                    resposta_final = explicar_resultado_llm(llm_texto, pergunta, colunas, linhas)
+
+                print("\n" + "-" * 70)
+                print("SQL EXECUTADO:")
+                print(sql)
+                print("-" * 70)
+                print("RESULTADO:")
+                print(linhas)
+                print("-" * 70)
+                print("RESPOSTA FINAL:")
+                print(resposta_final)
+                print("-" * 70)
+
+                # Deixado comentado para uso futuro.
+                # print("O QUE ESTA QUERY FAZ:")
+                # print(explicacao)
+                # print("-" * 70)
+
+            except Exception as e:
+                print("\nErro ao processar a pergunta:")
+                print(str(e))
+
     finally:
         conn.close()
 
