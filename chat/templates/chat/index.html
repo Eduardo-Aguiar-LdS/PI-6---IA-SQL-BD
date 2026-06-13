@@ -1,0 +1,218 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Omni Mind{% if active_session %} — {{ active_session.title }}{% endif %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'chat/css/style.css' %}" />
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">
+          <img src="{% static 'chat/omni_logo.jpeg' %}" alt="Omni Mind"
+            style="width:32px;height:32px;object-fit:cover;border-radius:8px;" />
+        </div>
+        <span class="logo-text">Omni Mind</span>
+      </div>
+
+      <div class="sidebar-content">
+
+        <button class="new-chat-btn" onclick="openNewChatModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Novo chat
+        </button>
+
+        <!-- RECENTES -->
+        <div class="section">
+          <div class="section-header" id="section-recentes" onclick="toggleSection('section-recentes')">
+            <div class="section-header-left">
+              <svg class="chevron open" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+              <span class="section-label">Recentes</span>
+            </div>
+          </div>
+          <div class="section-body open">
+            {% for session in sessions %}
+            <a href="{% url 'session_detail' session.id %}"
+              class="chat-item {% if active_session and active_session.id == session.id %}active{% endif %}"
+              data-id="{{ session.id }}">
+              <svg class="chat-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span class="chat-item-text">{{ session.title }}</span>
+              <div class="item-menu-wrap">
+                <button class="item-menu-btn" onclick="openDropdown(event, {{ session.id }}, false)" title="Opções">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round">
+                    <circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none" />
+                    <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+                    <circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none" />
+                  </svg>
+                </button>
+              </div>
+            </a>
+            {% empty %}
+            <p class="empty-section">Nenhum chat ainda.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- DESTACADOS -->
+        <div class="section">
+          <div class="section-header" id="section-destacados" onclick="toggleSection('section-destacados')">
+            <div class="section-header-left">
+              <svg class="chevron open" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+              <span class="section-label">Destacados</span>
+            </div>
+          </div>
+          <div class="section-body open">
+            {% for session in highlighted %}
+            <a href="{% url 'session_detail' session.id %}"
+              class="chat-item {% if active_session and active_session.id == session.id %}active{% endif %}"
+              data-id="{{ session.id }}">
+              <div class="highlighted-dot"></div>
+              <span class="chat-item-text">{{ session.title }}</span>
+              <div class="item-menu-wrap">
+                <button class="item-menu-btn" onclick="openDropdown(event, {{ session.id }}, true)" title="Opções">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round">
+                    <circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none" />
+                    <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+                    <circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none" />
+                  </svg>
+                </button>
+              </div>
+            </a>
+            {% empty %}
+            <p class="empty-section">Nenhum destaque ainda.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="{% url 'settings' %}" style="text-decoration:none;">
+          <div class="user-profile">
+            <div class="avatar">{{ user.initials }}</div>
+            <div class="user-info">
+              <div class="user-name">{{ user.name }}</div>
+              <div class="user-role">{{ user.role }}</div>
+            </div>
+            <svg class="settings-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </div>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ── MAIN ── -->
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title">
+            {% if active_session %}{{ active_session.title }}{% else %}Omni Mind{% endif %}
+          </div>
+          <div class="topbar-meta">
+            {% if active_session %}
+            Iniciado em {{ active_session.created_at|date:"d/m/Y" }} às {{ active_session.created_at|time:"H:i" }}
+            {% else %}
+            Selecione ou crie um chat para começar
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="messages-area" id="messages-area">
+        {% if active_session %}
+        {% for msg in messages %}
+        <div class="message-group">
+          <div class="message {{ msg.role }}">
+            <div class="msg-avatar {{ msg.role }}">
+              {% if msg.role == 'user' %}{{ user.initials }}{% else %}O{% endif %}
+            </div>
+            <div class="msg-content">
+              <span class="msg-sender">
+                {% if msg.role == 'user' %}{{ user.name }}{% else %}Omni Mind{% endif %}
+              </span>
+              <div class="msg-bubble">{{ msg.content|safe }}</div>
+              <span class="msg-time">{{ msg.created_at|time:"H:i" }}</span>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4l3 3" />
+            </svg>
+          </div>
+          <p class="empty-title">O que vamos explorar?</p>
+          <p class="empty-sub">Faça uma pergunta ou descreva o que deseja analisar.</p>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <p class="empty-title">Bem-vindo ao Omni Mind</p>
+          <p class="empty-sub">Crie um novo chat para começar.</p>
+          <div class="chips">
+            <button class="chip" onclick="setChip('Analisar tendências de dados')">Analisar tendências de dados</button>
+            <button class="chip" onclick="setChip('Criar relatório de KPIs')">Criar relatório de KPIs</button>
+            <button class="chip" onclick="setChip('Identificar anomalias')">Identificar anomalias</button>
+            <button class="chip" onclick="setChip('Fazer uma projeção')">Fazer uma projeção</button>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea class="prompt-input" id="prompt-input" rows="1" placeholder="Digite o que deseja consultar"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" onclick="sendMessage()" aria-label="Enviar">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" />
+            </svg>
+          </button>
+        </div>
+        <div class="input-footer">Omni Mind pode cometer erros. Verifique informações importantes.</div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    window.SESSION_ID = {% if active_session %}{ { active_session.id } } {% else %} null{% endif %};
+    window.CSRF_TOKEN = '{{ csrf_token }}';
+    window.USER_NAME = '{{ user.name }}';
+    window.USER_INITIALS = '{{ user.initials }}';
+  </script>
+  <script src="{% static 'chat/js/chat.js' %}"></script>
+</body>
+
+</html>

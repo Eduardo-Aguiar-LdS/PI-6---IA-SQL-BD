@@ -1,0 +1,460 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omni Mind — Configurações</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'chat/css/style.css' %}" />
+    <style>
+        .settings-page {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg);
+            padding: 16px 16px;
+        }
+
+        .settings-card {
+            background: #111;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            width: 100%;
+            max-width: 480px;
+            overflow: hidden;
+        }
+
+        .settings-header {
+            padding: 28px 32px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .settings-back {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.12s;
+            flex-shrink: 0;
+        }
+
+        .settings-back:hover {
+            background: var(--surface-hover);
+        }
+
+        .settings-back svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--text-secondary);
+        }
+
+        .settings-header-info {
+            flex: 1;
+        }
+
+        .settings-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .settings-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .settings-avatar-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 28px 32px 20px;
+            gap: 10px;
+        }
+
+        .settings-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: var(--accent-dim);
+            border: 2px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Syne', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .settings-cargo {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .settings-body {
+            padding: 8px 32px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-label {
+            font-size: 11.5px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+
+        .field-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .field-input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .field-input:focus {
+            border-color: #555;
+        }
+
+        .field-input:disabled {
+            color: var(--text-muted);
+            cursor: default;
+        }
+
+        .field-input.has-icon {
+            padding-right: 42px;
+        }
+
+        .field-eye {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+            transition: color 0.12s;
+        }
+
+        .field-eye:hover {
+            color: var(--text-secondary);
+        }
+
+        .field-eye svg {
+            width: 17px;
+            height: 17px;
+            stroke: currentColor;
+        }
+
+        .field-edit-btn {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+            transition: color 0.12s;
+        }
+
+        .field-edit-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .field-edit-btn svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--text-primary);
+            color: #0a0a0a;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            margin-top: 4px;
+        }
+
+        .save-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .save-btn:active {
+            transform: scale(0.98);
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 6px 0;
+        }
+
+        .delete-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .delete-btn:hover {
+            background: rgba(248, 113, 113, 0.08);
+            border-color: rgba(248, 113, 113, 0.6);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%) translateY(12px);
+            background: #1e1e1e;
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-size: 13px;
+            color: var(--text-primary);
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="settings-page">
+        <div class="settings-card">
+
+            <div class="settings-header">
+                <a href="{% if active_session %}{% url 'session_detail' active_session.id %}{% else %}{% url 'index' %}{% endif %}"
+                    class="settings-back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M19 12H5M12 5l-7 7 7 7" />
+                    </svg>
+                </a>
+                <div class="settings-header-info">
+                    <div class="settings-title">Configurações</div>
+                    <div class="settings-subtitle">Gerencie as informações da sua conta</div>
+                </div>
+            </div>
+
+            <div class="settings-avatar-area">
+                <div class="settings-avatar" id="avatar-display">{{ user.initials }}</div>
+                <span class="settings-cargo">{{ user.role }}</span>
+            </div>
+
+            <div class="settings-body">
+
+                <!-- Nome -->
+                <div class="field-group">
+                    <label class="field-label">Nome</label>
+                    <div class="field-wrap">
+                        <input id="field-name" class="field-input has-icon" type="text" value="{{ user.name }}"
+                            disabled />
+                        <button class="field-edit-btn" onclick="toggleEdit('field-name', this)" title="Editar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- E-mail -->
+                <div class="field-group">
+                    <label class="field-label">E-mail</label>
+                    <div class="field-wrap">
+                        <input id="field-email" class="field-input has-icon" type="email" value="{{ user.email }}"
+                            disabled />
+                        <button class="field-edit-btn" onclick="toggleEdit('field-email', this)" title="Editar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Senha -->
+                <div class="field-group">
+                    <label class="field-label">Senha</label>
+                    <div class="field-wrap">
+                        <input id="field-password" class="field-input" type="password" value="placeholder" disabled
+                            style="padding-right: 80px;" />
+                        <button class="field-eye" id="eye-btn" onclick="togglePassword()" title="Mostrar/ocultar senha"
+                            style="position:absolute;right:42px;">
+                            <svg id="eye-closed" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                            <svg id="eye-open" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" style="display:none;">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </button>
+                        <button class="field-edit-btn" onclick="toggleEdit('field-password', this)" title="Editar"
+                            style="position:absolute;right:10px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Salvar -->
+                <button class="save-btn" onclick="saveSettings()">Salvar alterações</button>
+
+                <div class="divider"></div>
+
+                <!-- Excluir conta -->
+                <button class="delete-btn" onclick="confirmDelete()">Excluir conta</button>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        window.CSRF_TOKEN = '{{ csrf_token }}';
+
+        function toggleEdit(fieldId, btn) {
+            const input = document.getElementById(fieldId);
+            const isDisabled = input.disabled;
+            input.disabled = !isDisabled;
+            if (!input.disabled) {
+                input.focus();
+                if (fieldId === 'field-password') input.value = '';
+                btn.style.color = 'var(--text-primary)';
+            } else {
+                btn.style.color = '';
+            }
+        }
+
+        function togglePassword() {
+            const input = document.getElementById('field-password');
+            const eyeOn = document.getElementById('eye-open');
+            const eyeOff = document.getElementById('eye-closed');
+            if (input.type === 'password') {
+                input.type = 'text';
+                eyeOn.style.display = 'block';
+                eyeOff.style.display = 'none';
+            } else {
+                input.type = 'password';
+                eyeOn.style.display = 'none';
+                eyeOff.style.display = 'block';
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2800);
+        }
+
+        async function saveSettings() {
+            const name = document.getElementById('field-name').value.trim();
+            const email = document.getElementById('field-email').value.trim();
+            const pwdField = document.getElementById('field-password');
+            const password = pwdField.disabled ? null : pwdField.value.trim();
+
+            const res = await fetch('/settings/save/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.CSRF_TOKEN },
+                body: JSON.stringify({ name, email, password }),
+            });
+            const data = await res.json();
+            if (data.ok) {
+                showToast('Alterações salvas com sucesso.');
+                document.getElementById('avatar-display').textContent = data.initials;
+            } else {
+                showToast('Erro ao salvar: ' + (data.error || 'tente novamente.'));
+            }
+        }
+
+        async function confirmDelete() {
+            if (!confirm('Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.')) return;
+            const res = await fetch('/settings/delete-account/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': window.CSRF_TOKEN },
+            });
+            const data = await res.json();
+            if (data.ok) window.location.href = '/';
+            else showToast('Erro ao excluir conta.');
+        }
+    </script>
+</body>
+
+</html>
