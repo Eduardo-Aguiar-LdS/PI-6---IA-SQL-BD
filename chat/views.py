@@ -1,121 +1,102 @@
-import json, random
+import json
+import datetime
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import ChatSession, Message
 
-AI_RESPONSES = [
-    "Analisando sua solicitação... Com base nos dados fornecidos, posso identificar padrões relevantes. Gostaria que eu aprofundasse algum aspecto específico?",
-    "Ótima pergunta. Para responder com precisão, vou cruzar as métricas disponíveis. Aqui está um resumo preliminar dos pontos críticos encontrados.",
-    "Processando os dados. A correlação entre as variáveis indica uma tendência consistente. Recomendo focar nos segmentos com maior variância.",
-    "Entendido. Com esse contexto adicional, a análise fica mais precisa. Os dados apontam para oportunidades claras de otimização.",
-    "Baseado nos padrões históricos, posso projetar três cenários possíveis. Qual deles você gostaria de explorar com mais profundidade?",
-]
+from pathlib import Path
+import sqlite3
+from langchain_ollama import OllamaLLM
+from .IA import (
+    limpar_sql, sql_valido, obter_schema, obter_mapa_colunas,
+    carregar_arquivo_texto, obter_exemplos_bd_path,
+    montar_exemplos_prompt, gerar_sql, regenerar_sql_com_erro,
+    executar_sql_readonly, montar_resposta_direta
+)
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH  = str(BASE_DIR / "db" / "biblioteca.sqlite")
+EXEMPLOS_GERAIS_PATH = str(BASE_DIR / "exemplos.txt")
+MODEL_SQL = "prem-research/prem-1b-sql-fp16:latest"
+
+def _get_ia_recursos():
+    conn   = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    schema          = obter_schema(cursor)
+    mapa_colunas    = obter_mapa_colunas(cursor)
+    exemplos_bd     = carregar_arquivo_texto(obter_exemplos_bd_path(DB_PATH))
+    exemplos_gerais = carregar_arquivo_texto(EXEMPLOS_GERAIS_PATH)
+    exemplos        = montar_exemplos_prompt(exemplos_bd, exemplos_gerais)
+    llm_sql         = OllamaLLM(model=MODEL_SQL)
+    return conn, cursor, schema, mapa_colunas, exemplos, llm_sql
+
+def _consultar_ia(pergunta: str) -> str:
+    conn, cursor, schema, mapa_colunas, exemplos, llm_sql = _get_ia_recursos()
+    try:
+        sql_bruto = gerar_sql(llm_sql, schema, mapa_colunas, pergunta, exemplos)
+        sql = limpar_sql(sql_bruto)
+        valido, motivo = sql_valido(sql)
+        if not valido:
+            return f"Não foi possível gerar uma consulta válida: {motivo}"
+        try:
+            colunas, linhas = executar_sql_readonly(cursor, sql)
+        except Exception as e_exec:
+            erro = str(e_exec)
+            if "no such column" in erro.lower() or "no such table" in erro.lower():
+                sql_bruto = regenerar_sql_com_erro(
+                    llm_sql, schema, mapa_colunas, pergunta, sql, erro, exemplos
+                )
+                sql = limpar_sql(sql_bruto)
+                valido, motivo = sql_valido(sql)
+                if not valido:
+                    return f"Não foi possível corrigir a consulta: {motivo}"
+                colunas, linhas = executar_sql_readonly(cursor, sql)
+            else:
+                return f"Erro ao executar a consulta: {erro}"
+        return montar_resposta_direta(colunas, linhas)
+    finally:
+        conn.close()
 
 USER = {'name': 'Eduardo Aguiar', 'initials': 'EA', 'role': 'Estagiário', 'email': 'eduardo@email.com'}
 
 def index(request):
-    sessions = ChatSession.objects.filter(is_highlighted=False)
-    highlighted = ChatSession.objects.filter(is_highlighted=True)
-    active_session = sessions.first()
-    messages = active_session.messages.all() if active_session else []
-    return render(request, 'chat/index.html', {
-        'sessions': sessions, 'highlighted': highlighted,
-        'active_session': active_session, 'messages': messages, 'user': USER,
-    })
+    return render(request, 'chat/index.html', {'user': USER})
 
-def session_detail(request, session_id):
-    session = get_object_or_404(ChatSession, id=session_id)
-    sessions = ChatSession.objects.filter(is_highlighted=False)
-    highlighted = ChatSession.objects.filter(is_highlighted=True)
-    return render(request, 'chat/index.html', {
-        'sessions': sessions, 'highlighted': highlighted,
-        'active_session': session, 'messages': session.messages.all(), 'user': USER,
-    })
+def settings_page(request):
+    return render(request, 'chat/settings.html', {'user': USER})
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def send_message(request, session_id):
-    session = get_object_or_404(ChatSession, id=session_id)
+def perguntar(request):
     data = json.loads(request.body)
     user_text = data.get('message', '').strip()
     if not user_text:
         return JsonResponse({'error': 'Empty'}, status=400)
-    Message.objects.create(session=session, role='user', content=user_text)
-    ai_text = random.choice(AI_RESPONSES)
-    ai_msg = Message.objects.create(session=session, role='ai', content=ai_text)
-    session.save()
-    return JsonResponse({'ai_message': ai_text, 'timestamp': ai_msg.created_at.strftime('%H:%M')})
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def new_session(request):
-    data = json.loads(request.body)
-    title = data.get('title', 'Novo chat')
-    session = ChatSession.objects.create(title=title)
-    Message.objects.create(session=session, role='ai',
-        content=f'Olá, {USER["name"]}! Estou pronto para ajudar. Como posso auxiliar você hoje?')
-    return JsonResponse({'session_id': session.id, 'title': session.title})
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def toggle_highlight(request, session_id):
-    session = get_object_or_404(ChatSession, id=session_id)
-    session.is_highlighted = not session.is_highlighted
-    session.save()
-    return JsonResponse({'is_highlighted': session.is_highlighted})
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def delete_session(request, session_id):
-    session = get_object_or_404(ChatSession, id=session_id)
-    session.delete()
-    return JsonResponse({'ok': True})
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def rename_session(request, session_id):
-    session = get_object_or_404(ChatSession, id=session_id)
-    data = json.loads(request.body)
-    title = data.get('title', '').strip()
-    if title:
-        session.title = title
-        session.save()
-    return JsonResponse({'title': session.title})
-
-def settings_page(request):
-    sessions = ChatSession.objects.filter(is_highlighted=False)
-    highlighted = ChatSession.objects.filter(is_highlighted=True)
-    active_session = sessions.first()
-    return render(request, 'chat/settings.html', {
-        'user': USER,
-        'active_session': active_session,
-    })
-
+    try:
+        ai_text = _consultar_ia(user_text)
+    except Exception as e:
+        ai_text = f"Erro interno: {str(e)}"
+    now = datetime.datetime.now()
+    return JsonResponse({'ai_message': ai_text, 'timestamp': now.strftime('%H:%M')})
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def save_settings(request):
-    data = json.loads(request.body)
-    name = data.get('name', '').strip()
-    email = data.get('email', '').strip()
+    data     = json.loads(request.body)
+    name     = data.get('name', '').strip()
+    email    = data.get('email', '').strip()
     password = data.get('password')
-
     if name:
         USER['name'] = name
         parts = name.split()
         USER['initials'] = (parts[0][0] + parts[-1][0]).upper() if len(parts) > 1 else parts[0][:2].upper()
-
     if email:
         USER['email'] = email
-
     if password:
         USER['password'] = password
-
     return JsonResponse({'ok': True, 'initials': USER['initials']})
-
 
 @csrf_exempt
 @require_http_methods(["POST"])
