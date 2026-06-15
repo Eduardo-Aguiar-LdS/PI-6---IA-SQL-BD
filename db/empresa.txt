@@ -1,0 +1,102 @@
+Q: Quais funcionarios trabalham na empresa?
+Q: Which employees work at the company?
+A: SELECT nome, status FROM funcionarios WHERE status <> 'Desligado';
+
+Q: Quais cargos existem na empresa?
+Q: Which job positions exist in the company?
+A: SELECT nome, nivel, salario_base FROM cargos ORDER BY salario_base DESC;
+
+Q: Quais funcionarios sao CEO, CTO ou CFO?
+Q: Which employees are CEO, CTO, or CFO?
+A: SELECT f.nome, c.nome AS cargo FROM funcionarios f
+   JOIN cargos c ON c.id = f.cargo_id
+   WHERE c.nome IN ('CEO', 'CTO', 'CFO');
+
+Q: Quais funcionarios tem salario acima de 10000?
+Q: Which employees have a salary above 10000?
+A: SELECT nome, salario_atual FROM funcionarios
+   WHERE salario_atual > 10000
+   ORDER BY salario_atual DESC;
+
+Q: Qual a folha salarial por departamento?
+Q: What is the payroll by department?
+A: SELECT d.nome AS departamento, ROUND(SUM(f.salario_atual), 2) AS folha_salarial
+   FROM funcionarios f
+   JOIN cargos c ON c.id = f.cargo_id
+   JOIN departamentos d ON d.id = c.departamento_id
+   WHERE f.status <> 'Desligado'
+   GROUP BY d.nome
+   ORDER BY folha_salarial DESC;
+
+Q: Quais produtos estao com estoque baixo?
+Q: Which products are low in stock?
+A: SELECT p.nome, e.quantidade_atual, e.estoque_minimo
+   FROM estoque e
+   JOIN produtos p ON p.id = e.produto_id
+   WHERE e.quantidade_atual <= e.estoque_minimo
+   ORDER BY e.quantidade_atual ASC;
+
+Q: Quais produtos estao em estoque?
+Q: Which products are in stock?
+A: SELECT p.nome, e.quantidade_atual
+   FROM estoque e
+   JOIN produtos p ON p.id = e.produto_id
+   WHERE e.quantidade_atual > 0
+   ORDER BY e.quantidade_atual DESC;
+
+Q: Quais produtos foram mais vendidos no mes?
+Q: Which products sold the most this month?
+A: SELECT p.nome, SUM(v.quantidade) AS total_vendido
+   FROM vendas v
+   JOIN produtos p ON p.id = v.produto_id
+   WHERE strftime('%Y-%m', v.data_venda) = strftime('%Y-%m', 'now')
+   GROUP BY p.nome
+   ORDER BY total_vendido DESC;
+
+Q: Qual foi o faturamento total do mes?
+Q: What is the total revenue for the month?
+A: SELECT ROUND(SUM(v.quantidade * v.preco_unitario - v.desconto), 2) AS faturamento_total
+   FROM vendas v
+   WHERE strftime('%Y-%m', v.data_venda) = strftime('%Y-%m', 'now');
+
+Q: Quais produtos tiveram vendas no mes?
+Q: Which products had sales this month?
+A: SELECT DISTINCT p.nome
+   FROM vendas v
+   JOIN produtos p ON p.id = v.produto_id
+   WHERE strftime('%Y-%m', v.data_venda) = strftime('%Y-%m', 'now')
+   ORDER BY p.nome;
+
+Q: Qual funcionario realizou mais vendas?
+Q: Which employee made the most sales?
+A: SELECT f.nome, SUM(v.quantidade) AS total_vendido
+   FROM vendas v
+   JOIN funcionarios f ON f.id = v.funcionario_id
+   GROUP BY f.nome
+   ORDER BY total_vendido DESC
+   LIMIT 1;
+
+Q: Quais produtos tem preco acima de 1000?
+Q: Which products cost above 1000?
+A: SELECT nome, preco_venda FROM produtos
+   WHERE preco_venda > 1000
+   ORDER BY preco_venda DESC;
+
+Q: Quais produtos tem maior margem de lucro?
+Q: Which products have the highest profit margin?
+A: SELECT nome, ROUND(((preco_venda - preco_custo) / preco_venda) * 100, 2) AS margem_percentual
+   FROM produtos
+   ORDER BY margem_percentual DESC;
+
+Q: Quais funcionarios estao de ferias ou afastados?
+Q: Which employees are on vacation or away?
+A: SELECT nome, status FROM funcionarios
+   WHERE status IN ('Ferias', 'Afastado');
+
+Q: Quais vendas foram feitas pela internet?
+Q: Which sales were made online?
+A: SELECT v.data_venda, p.nome, v.quantidade, v.canal
+   FROM vendas v
+   JOIN produtos p ON p.id = v.produto_id
+   WHERE v.canal IN ('Site', 'Marketplace')
+   ORDER BY v.data_venda DESC;
