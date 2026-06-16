@@ -50,5 +50,5 @@ Ative/Entre no ambiente virtual rodando
 Com o ambiente virtual ativado, execute:
 
 ```bash
-python IA.py
+python manage.py runserver
 ```

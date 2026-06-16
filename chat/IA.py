@@ -198,9 +198,8 @@ def montar_resposta_direta(colunas, linhas):
         return "Resposta: " + ", ".join(pares)
 
     resultados = []
-    limite = min(len(linhas), 5)
 
-    for i, linha in enumerate(linhas[:limite], start=1):
+    for i, linha in enumerate(linhas, start=1):
         pares = [f"{col}: {valor}" for col, valor in zip(colunas, linha)]
         resultados.append(f"{i}) " + ", ".join(pares))
 

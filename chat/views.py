@@ -21,7 +21,7 @@ from .IA import (
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH  = str(BASE_DIR / "db" / "empresa.sqlite")
+DB_PATH  = str(BASE_DIR / "db" / "biblioteca.sqlite")
 EXEMPLOS_GERAIS_PATH = str(BASE_DIR / "exemplos.txt")
 MODEL_SQL = "prem-research/prem-1b-sql-fp16:latest"
 
