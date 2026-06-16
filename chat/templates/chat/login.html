@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Omni Mind — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a; --surface: #111111; --border: #2a2a2a; --border-light: #333333;
+    --text-primary: #f0f0f0; --text-secondary: #888888; --text-muted: #555555;
+    --input-bg: #161616; --surface-hover: #202020;
+  }
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text-primary); display: flex; align-items: center; justify-content: center; }
+
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; width: 100%; max-width: 400px; padding: 40px 36px 36px; display: flex; flex-direction: column; gap: 28px; }
+
+  .login-header { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .login-logo { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+  .login-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+  .login-sub { font-size: 13px; color: var(--text-muted); text-align: center; margin-top: -8px; }
+
+  .login-form { display: flex; flex-direction: column; gap: 16px; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 11.5px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  .field-wrap { position: relative; display: flex; align-items: center; }
+  .field-input { width: 100%; background: var(--input-bg); border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text-primary); outline: none; transition: border-color 0.15s; }
+  .field-input:focus { border-color: #555; }
+  .field-input::placeholder { color: var(--text-muted); }
+  .field-input.has-icon { padding-right: 42px; }
+
+  .field-eye { position: absolute; right: 12px; background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; color: var(--text-muted); transition: color 0.12s; }
+  .field-eye:hover { color: var(--text-secondary); }
+  .field-eye svg { width: 17px; height: 17px; stroke: currentColor; }
+
+  .error-msg { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #f87171; display: {% if error %}flex{% else %}none{% endif %}; align-items: center; gap: 8px; }
+  .error-msg svg { width: 15px; height: 15px; stroke: currentColor; flex-shrink: 0; }
+
+  .login-btn { width: 100%; padding: 13px; background: var(--text-primary); color: #0a0a0a; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s; margin-top: 4px; }
+  .login-btn:hover { background: #d0d0d0; }
+  .login-btn:active { transform: scale(0.98); }
+</style>
+</head>
+<body>
+<div class="login-card">
+
+  <div class="login-header">
+    <img src="{% static 'chat/omni_logo.jpeg' %}" alt="Omni Mind" class="login-logo"
+      onerror="this.style.display='none'" />
+    <div class="login-title">Omni Mind</div>
+    <div class="login-sub">Consulta inteligente ao banco de dados</div>
+  </div>
+
+  <form class="login-form" method="POST" action="{% url 'login' %}">
+    {% csrf_token %}
+
+    <div class="error-msg" id="error-msg">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {% if error %}{{ error }}{% endif %}
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Usuário</label>
+      <div class="field-wrap">
+        <input class="field-input" type="text" name="username" placeholder="Digite seu usuário" autofocus required />
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Senha</label>
+      <div class="field-wrap">
+        <input class="field-input has-icon" type="password" name="password" id="field-password" placeholder="Digite sua senha" required />
+        <button type="button" class="field-eye" onclick="togglePassword()">
+          <svg id="eye-closed" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+          <svg id="eye-open" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <button type="submit" class="login-btn">Entrar</button>
+  </form>
+
+</div>
+<script>
+  function togglePassword() {
+    const input  = document.getElementById('field-password');
+    const eyeOn  = document.getElementById('eye-open');
+    const eyeOff = document.getElementById('eye-closed');
+    if (input.type === 'password') {
+      input.type = 'text';
+      eyeOn.style.display  = 'block';
+      eyeOff.style.display = 'none';
+    } else {
+      input.type = 'password';
+      eyeOn.style.display  = 'none';
+      eyeOff.style.display = 'block';
+    }
+  }
+</script>
+</body>
+</html>

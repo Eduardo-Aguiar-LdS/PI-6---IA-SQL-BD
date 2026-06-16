@@ -6,6 +6,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import ChatSession, Message
 
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+
 from pathlib import Path
 import sqlite3
 from langchain_ollama import OllamaLLM
@@ -61,9 +65,29 @@ def _consultar_ia(pergunta: str) -> str:
 
 USER = {'name': 'Eduardo Aguiar', 'initials': 'EA', 'role': 'Estagiário', 'email': 'eduardo@email.com'}
 
+def login_page(request):
+    if request.user.is_authenticated:
+        return redirect('index')
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('/chat/')
+        else:
+            return render(request, 'chat/login.html', {'error': 'Usuário ou senha incorretos.'})
+    return render(request, 'chat/login.html')
+
+def logout_page(request):
+    logout(request)
+    return redirect('login')
+
+@login_required
 def index(request):
     return render(request, 'chat/index.html', {'user': USER})
 
+@login_required
 def settings_page(request):
     return render(request, 'chat/settings.html', {'user': USER})
 

@@ -28,3 +28,6 @@ DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DI
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'chat' / 'static']
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+LOGIN_URL = '/'
+LOGIN_REDIRECT_URL = '/chat/'
+LOGOUT_REDIRECT_URL = '/'
